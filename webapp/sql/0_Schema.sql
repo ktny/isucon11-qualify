@@ -26,7 +26,7 @@ CREATE TABLE `isu_condition` (
   -- `timestamp_desc` DATETIME AS (-timestamp) NOT NULL,
   PRIMARY KEY(`id`),
   INDEX idx_jia_isu_uuid (jia_isu_uuid)
-  INDEX idx_jia_isu_uuid_timestamp (jia_isu_uuid, timestamp)
+  INDEX idx_jia_isu_uuid_timestamp (`jia_isu_uuid`, `timestamp`)
   -- INDEX idx_timestamp_desc (timestamp_desc)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
