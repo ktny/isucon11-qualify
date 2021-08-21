@@ -9,7 +9,7 @@ dest=/home/isucon/webapp/go/isucondition
 cd webapp/go
 go build -o isucondition
 
-for server in isu01 isu02 isu03; do
+for server in isu01; do
     ssh -tq $server "sudo systemctl stop isucondition.go.service"
     scp ./isucondition $server:$dest
     ssh -tq $server "sudo systemctl start isucondition.go.service"

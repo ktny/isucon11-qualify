@@ -4,7 +4,7 @@ echo "start deploy db ${USER}"
 
 dest=/home/isucon/webapp/sql/
 
-for server in isu01 isu02 isu03; do
+for server in isu01; do
     ssh -tq $server "sudo systemctl stop mariadb"
     ssh -tq $server "sudo rm -f /var/log/mysql/mysql-slow.log"
     ssh -tq $server "mysql -uisucon -pisucon -e'flush logs;' isucondition"
