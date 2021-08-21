@@ -353,15 +353,7 @@ func loadInitialConditions() error {
 
 	initializeIsuConditionCache()
 
-	for _, v := range conditions {
-		setIsuConditionCache(&CachedIsuCondition{
-			JIAIsuUUID: v.JIAIsuUUID,
-			Timestamp:  v.Timestamp,
-			IsSitting:  v.IsSitting,
-			Condition:  v.Condition,
-			Message:    v.Message,
-		})
-	}
+	setIsuConditionsOnCache(&conditions)
 
 	return nil
 }
@@ -372,6 +364,18 @@ func initializeIsuConditionCache() {
 
 func setIsuConditionCache(cond *CachedIsuCondition) {
 	newestIsuConditionCache[cond.JIAIsuUUID] = cond
+}
+
+func setIsuConditionsOnCache(conds *[]IsuCondition) {
+	for _, cond := range *conds {
+		newestIsuConditionCache[cond.JIAIsuUUID] = &CachedIsuCondition{
+			JIAIsuUUID: cond.JIAIsuUUID,
+			Timestamp:  cond.Timestamp,
+			IsSitting:  cond.IsSitting,
+			Condition:  cond.Condition,
+			Message:    cond.Message,
+		}
+	}
 }
 
 func getIsuConditionCache(key string) *CachedIsuCondition {
@@ -1253,15 +1257,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	for _, cond := range conditions {
-		setIsuConditionCache(&CachedIsuCondition{
-			JIAIsuUUID: cond.JIAIsuUUID,
-			Timestamp:  cond.Timestamp,
-			IsSitting:  cond.IsSitting,
-			Condition:  cond.Condition,
-			Message:    cond.Message,
-		})
-	}
+	go setIsuConditionsOnCache(&conditions)
 
 	return c.NoContent(http.StatusAccepted)
 }
