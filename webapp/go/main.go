@@ -316,9 +316,9 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if err := loadInitialConditions(); err != nil {
-		c.Logger().Errorf("Load initial conditions error : %v", err)
-	}
+	// if err := loadInitialConditions(); err != nil {
+	// 	c.Logger().Errorf("Load initial conditions error : %v", err)
+	// }
 
 	// 初期ユーザーの登録
 	userMap["confident_chatelet"] = true
@@ -539,10 +539,21 @@ func getIsuList(c echo.Context) error {
 
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
-		lastCondition := getIsuConditionCache(isu.JIAIsuUUID)
+		var lastCondition IsuCondition
+		foundLastCondition := true
+		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+			isu.JIAIsuUUID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				foundLastCondition = false
+			} else {
+				c.Logger().Errorf("db error: %v", err)
+				return c.NoContent(http.StatusInternalServerError)
+			}
+		}
 
 		var formattedCondition *GetIsuConditionResponse
-		if lastCondition != nil {
+		if foundLastCondition {
 			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
 			if err != nil {
 				c.Logger().Error(err)
@@ -767,9 +778,9 @@ func getIsuIcon(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-    // レスポンスヘッダ
-    response := c.Response()
-    response.Header().Set("Cache-Control", "public max-age=86400")
+	// レスポンスヘッダ
+	response := c.Response()
+	response.Header().Set("Cache-Control", "public max-age=86400")
 
 	return c.Blob(http.StatusOK, "", image)
 }
@@ -1259,7 +1270,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	go setIsuConditionsOnCache(&conditions)
+	// go setIsuConditionsOnCache(&conditions)
 
 	return c.NoContent(http.StatusAccepted)
 }
