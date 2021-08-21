@@ -170,6 +170,9 @@ type JIAServiceRequest struct {
 	IsuUUID       string `json:"isu_uuid"`
 }
 
+var jiaServiceURL string
+var defaultIconImage []byte
+
 func getEnv(key string, defaultValue string) string {
 	val := os.Getenv(key)
 	if val != "" {
@@ -291,18 +294,6 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	return jiaUserID, 0, nil
 }
 
-func getJIAServiceURL(tx *sqlx.Tx) string {
-	var config Config
-	err := tx.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Print(err)
-		}
-		return defaultJIAServiceURL
-	}
-	return config.URL
-}
-
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
@@ -325,13 +316,13 @@ func postInitialize(c echo.Context) error {
 		c.Logger().Errorf("Load initial conditions error : %v", err)
 	}
 
-	_, err = db.Exec(
-		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
-		"jia_service_url",
-		request.JIAServiceURL,
-	)
+	jiaServiceURL = request.JIAServiceURL
+
+	// デフォルトアイコン画像の読み込み
+	defaultIconImage, err = ioutil.ReadFile(defaultIconFilePath)
+
 	if err != nil {
-		c.Logger().Errorf("db error : %v", err)
+		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
@@ -582,11 +573,7 @@ func postIsu(c echo.Context) error {
 	var image []byte
 
 	if useDefaultImage {
-		image, err = ioutil.ReadFile(defaultIconFilePath)
-		if err != nil {
-			c.Logger().Error(err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+		image = defaultIconImage
 	} else {
 		file, err := fh.Open()
 		if err != nil {
@@ -623,7 +610,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	targetURL := getJIAServiceURL(tx) + "/api/activate"
+	targetURL := jiaServiceURL + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
