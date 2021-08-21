@@ -311,6 +311,10 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	if err := loadInitialConditions(); err != nil {
+		c.Logger().Errorf("Load initial conditions error : %v", err)
+	}
+
 	// 初期ユーザーの登録
 	userMap["confident_chatelet"] = true
 	userMap["happy_haibt"] = true
@@ -348,8 +352,57 @@ func loadInitializeIsuJiaIsuUUIDs() error {
 	for _, id := range uuids {
 		isuIDMap[id] = true
 	}
+	return nil
+}
+
+type CachedIsuCondition struct {
+	JIAIsuUUID string
+	Timestamp  time.Time
+	IsSitting  bool
+	Condition  string
+	Message    string
+}
+
+var newestIsuConditionCache map[string]*CachedIsuCondition
+
+func loadInitialConditions() error {
+	var conditions []IsuCondition
+
+	query := "SELECT * FROM isu_condition WHERE id IN (SELECT MAX(id) FROM isu_condition GROUP BY jia_isu_uuid);"
+
+	if err := db.Select(&conditions, query); err != nil {
+		return err
+	}
+
+	initializeIsuConditionCache()
+
+	setIsuConditionsOnCache(&conditions)
 
 	return nil
+}
+
+func initializeIsuConditionCache() {
+	newestIsuConditionCache = map[string]*CachedIsuCondition{}
+}
+
+func setIsuConditionCache(cond *CachedIsuCondition) {
+	newestIsuConditionCache[cond.JIAIsuUUID] = cond
+}
+
+func setIsuConditionsOnCache(conds *[]IsuCondition) {
+	for _, cond := range *conds {
+		newestIsuConditionCache[cond.JIAIsuUUID] = &CachedIsuCondition{
+			JIAIsuUUID: cond.JIAIsuUUID,
+			Timestamp:  cond.Timestamp,
+			IsSitting:  cond.IsSitting,
+			Condition:  cond.Condition,
+			Message:    cond.Message,
+		}
+	}
+}
+
+func getIsuConditionCache(key string) *CachedIsuCondition {
+	return newestIsuConditionCache[key]
 }
 
 // POST /api/auth
@@ -483,21 +536,10 @@ func getIsuList(c echo.Context) error {
 
 	responseList := []GetIsuListResponse{}
 	for _, isu := range isuList {
-		var lastCondition IsuCondition
-		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-			isu.JIAIsuUUID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				foundLastCondition = false
-			} else {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-		}
+		lastCondition := getIsuConditionCache(isu.JIAIsuUUID)
 
 		var formattedCondition *GetIsuConditionResponse
-		if foundLastCondition {
+		if lastCondition != nil {
 			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
 			if err != nil {
 				c.Logger().Error(err)
@@ -1213,12 +1255,13 @@ func postIsuCondition(c echo.Context) error {
 	query := "INSERT INTO `isu_condition`" +
 		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)" +
 		"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)"
-
 	_, err = db.NamedExec(query, conditions)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	go setIsuConditionsOnCache(&conditions)
 
 	return c.NoContent(http.StatusAccepted)
 }
