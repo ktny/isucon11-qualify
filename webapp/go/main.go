@@ -1270,7 +1270,7 @@ func postIsuCondition(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	go setIsuConditionsOnCache(&conditions)
+	// go setIsuConditionsOnCache(&conditions)
 
 	return c.NoContent(http.StatusAccepted)
 }
