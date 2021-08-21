@@ -6,7 +6,9 @@ echo "start deploy app ${USER}"
 dest=/home/isucon/webapp/go/isucondition
 
 # GOOS=linux go build -o app src/isucon/app.go
+cd webapp/go
 go build -o isucondition
+cd ../..
 
 for server in isu01; do
     # deploy db
