@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -51,6 +52,8 @@ var (
 
 	postIsuConditionTargetBaseURL string // JIAへのactivate時に登録する，ISUがconditionを送る先のURL
 )
+
+var lock = sync.Mutex{}
 
 type Config struct {
 	Name string `db:"name"`
@@ -393,6 +396,9 @@ func setIsuConditionCache(cond *CachedIsuCondition) {
 }
 
 func setIsuConditionsOnCache(conds *[]IsuCondition) {
+	lock.Lock()
+	defer lock.Unlock()
+
 	for _, cond := range *conds {
 		newestIsuConditionCache[cond.JIAIsuUUID] = &CachedIsuCondition{
 			JIAIsuUUID: cond.JIAIsuUUID,
@@ -405,6 +411,9 @@ func setIsuConditionsOnCache(conds *[]IsuCondition) {
 }
 
 func getIsuConditionCache(key string) *CachedIsuCondition {
+	lock.Lock()
+	defer lock.Unlock()
+
 	return newestIsuConditionCache[key]
 }
 
