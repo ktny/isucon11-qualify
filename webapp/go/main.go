@@ -171,7 +171,6 @@ type JIAServiceRequest struct {
 }
 
 var jiaServiceURL string
-var userMap map[string]bool
 
 func getEnv(key string, defaultValue string) string {
 	val := os.Getenv(key)
@@ -279,8 +278,15 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	}
 
 	jiaUserID := _jiaUserID.(string)
-	_, ok = userMap[jiaUserID]
-	if !ok {
+	var count int
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM `user` WHERE `jia_user_id` = ?",
+		jiaUserID)
+	if err != nil {
+		return "", http.StatusInternalServerError, fmt.Errorf("db error: %v", err)
+	}
+
+	if count == 0 {
 		return "", http.StatusUnauthorized, fmt.Errorf("not found: user")
 	}
 
@@ -304,13 +310,6 @@ func postInitialize(c echo.Context) error {
 		c.Logger().Errorf("exec init.sh error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	// 初期ユーザーの登録
-	userMap["confident_chatelet"] = true
-	userMap["happy_haibt"] = true
-	userMap["isucon1"] = true
-	userMap["isucon2"] = true
-	userMap["strange_dubinsky"] = true
 
 	jiaServiceURL = request.JIAServiceURL
 	return c.JSON(http.StatusOK, InitializeResponse{
@@ -353,7 +352,11 @@ func postAuthentication(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid JWT payload")
 	}
 
-	userMap[jiaUserID] = true
+	_, err = db.Exec("INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
 
 	session, err := getSession(c.Request())
 	if err != nil {
