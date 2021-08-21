@@ -1,0 +1,19 @@
+[mysqld]
+# basic
+max_connections = 1024
+
+# Slow Query Log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/mysql-slow.log
+long_query_time = 0
+log_queries_not_using_indexes = 0
+
+# innodb
+innodb_buffer_pool_size        = 2G # ~75% of all memory
+innodb_flush_method            = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+
+# query cache (only mysql ~5.7)
+query_cache_type  = 1
+query_cache_limit = 1M
+query_cache_size  = 16M
