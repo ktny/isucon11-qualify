@@ -307,6 +307,7 @@ func postInitialize(c echo.Context) error {
 	}
 
 	// 初期ユーザーの登録
+	userMap = map[string]bool{}
 	userMap["confident_chatelet"] = true
 	userMap["happy_haibt"] = true
 	userMap["isucon1"] = true
