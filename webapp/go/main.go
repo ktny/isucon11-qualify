@@ -54,6 +54,7 @@ var (
 )
 
 var lock = sync.Mutex{}
+var rwlock = sync.RWMutex{}
 
 type Config struct {
 	Name string `db:"name"`
@@ -411,8 +412,8 @@ func setIsuConditionsOnCache(conds *[]IsuCondition) {
 }
 
 func getIsuConditionCache(key string) *CachedIsuCondition {
-	lock.Lock()
-	defer lock.Unlock()
+	rwlock.Lock()
+	defer rwlock.Unlock()
 
 	return newestIsuConditionCache[key]
 }
@@ -776,9 +777,9 @@ func getIsuIcon(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-    // レスポンスヘッダ
-    response := c.Response()
-    response.Header().Set("Cache-Control", "public max-age=86400")
+	// レスポンスヘッダ
+	response := c.Response()
+	response.Header().Set("Cache-Control", "public max-age=86400")
 
 	return c.Blob(http.StatusOK, "", image)
 }
