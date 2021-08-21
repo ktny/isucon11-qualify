@@ -173,6 +173,7 @@ type JIAServiceRequest struct {
 var jiaServiceURL string
 var defaultIconImage []byte
 var userMap map[string]bool
+var isuIDMap map[string]bool
 
 func getEnv(key string, defaultValue string) string {
 	val := os.Getenv(key)
@@ -242,6 +243,10 @@ func main() {
 	e.GET("/isu/:jia_isu_uuid/graph", getIndex)
 	e.GET("/register", getIndex)
 	e.Static("/assets", frontendContentsPath+"/assets")
+
+	// cache用mapの初期化
+	userMap = map[string]bool{}
+	isuIDMap = map[string]bool{}
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
@@ -331,9 +336,28 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	err = loadInitializeIsuJiaIsuUUIDs()
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
+}
+
+func loadInitializeIsuJiaIsuUUIDs() error {
+	var uuids []string
+	err := db.Select(&uuids, "SELECT `jia_isu_uuid` FROM `isu`")
+	if err != nil {
+		return err
+	}
+
+	for _, id := range uuids {
+		isuIDMap[id] = true
+	}
+	return nil
 }
 
 type CachedIsuCondition struct {
@@ -674,6 +698,8 @@ func postIsu(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	isuIDMap[isu.JIAIsuUUID] = true
 
 	err = tx.Commit()
 	if err != nil {
@@ -1211,25 +1237,12 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
-	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	if count == 0 {
+	_, ok := isuIDMap[jiaIsuUUID]
+	if !ok {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
 	conditions := make([]IsuCondition, len(req))
-
 	for i, cond := range req {
 		timestamp := time.Unix(cond.Timestamp, 0)
 
@@ -1249,15 +1262,7 @@ func postIsuCondition(c echo.Context) error {
 	query := "INSERT INTO `isu_condition`" +
 		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)" +
 		"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)"
-
-	_, err = tx.NamedExec(query, conditions)
-
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	err = tx.Commit()
+	_, err = db.NamedExec(query, conditions)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
