@@ -211,6 +211,9 @@ func init() {
 }
 
 func main() {
+	userMap = map[string]bool{}
+	initializeIsuConditionCache()
+
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
@@ -313,7 +316,6 @@ func postInitialize(c echo.Context) error {
 	}
 
 	// 初期ユーザーの登録
-	userMap = map[string]bool{}
 	userMap["confident_chatelet"] = true
 	userMap["happy_haibt"] = true
 	userMap["isucon1"] = true
@@ -352,8 +354,6 @@ func loadInitialConditions() error {
 	if err := db.Select(&conditions, query); err != nil {
 		return err
 	}
-
-	initializeIsuConditionCache()
 
 	setIsuConditionsOnCache(&conditions)
 
