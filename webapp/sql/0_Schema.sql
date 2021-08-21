@@ -23,10 +23,12 @@ CREATE TABLE `isu_condition` (
   `condition` VARCHAR(255) NOT NULL,
   `message` VARCHAR(255) NOT NULL,
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+  `desc_unix_timestamp` INTEGER(11) AS (-UNIX_TIMESTAMP(`timestamp`)) NOT NULL -- Generated Columns
   -- `timestamp_desc` DATETIME AS (-timestamp) NOT NULL,
   PRIMARY KEY(`id`),
   INDEX idx_jia_isu_uuid (jia_isu_uuid)
   INDEX idx_jia_isu_uuid_timestamp (`jia_isu_uuid`, `timestamp`)
+  INDEX idx_jia_isu_uuid_desc_unix_timestamp (`jia_isu_uuid`, `desc_unix_timestamp`)
   -- INDEX idx_timestamp_desc (timestamp_desc)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
