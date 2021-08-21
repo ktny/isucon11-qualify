@@ -171,6 +171,7 @@ type JIAServiceRequest struct {
 }
 
 var jiaServiceURL string
+var defaultIconImage []byte
 
 func getEnv(key string, defaultValue string) string {
 	val := os.Getenv(key)
@@ -312,6 +313,14 @@ func postInitialize(c echo.Context) error {
 	}
 
 	jiaServiceURL = request.JIAServiceURL
+
+	// デフォルトアイコン画像の読み込み
+	defaultIconImage, err = ioutil.ReadFile(defaultIconFilePath)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
@@ -530,11 +539,7 @@ func postIsu(c echo.Context) error {
 	var image []byte
 
 	if useDefaultImage {
-		image, err = ioutil.ReadFile(defaultIconFilePath)
-		if err != nil {
-			c.Logger().Error(err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+		image = defaultIconImage
 	} else {
 		file, err := fh.Open()
 		if err != nil {
