@@ -11,7 +11,7 @@ godest=/home/isucon/webapp/go/
 # go build -o isucondition
 # cd ../..
 
-for server in isu01; do
+for server in isu02; do
     # deploy db
     ssh -tq $server "sudo systemctl stop mariadb"
     ssh -tq $server "sudo rm -f /var/log/mysql/mysql-slow.log"
@@ -21,6 +21,11 @@ for server in isu01; do
     scp webapp/sql/1_InitData.sql $server:$sqldest
     ssh -tq $server "/home/isucon/webapp/sql/init.sh"
     ssh -tq $server "sudo systemctl start mariadb"
+
+    # deploy nginx
+    scp nginx.conf $server:/etc/nginx/nginx.conf
+    ssh -tq $server "sudo rm -f /var/log/nginx/access.log"
+    ssh -tq $server "sudo systemctl restart nginx"
 
     # deploy app
     ssh -tq $server "sudo systemctl stop isucondition.go.service"
