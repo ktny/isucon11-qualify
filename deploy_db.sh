@@ -6,7 +6,7 @@ dest=/home/isucon/webapp/sql/
 
 for server in isu01 isu02 isu03; do
     ssh -tq $server "sudo systemctl stop mariadb"
-    ssh -tq $server "sudo rm -f /var/log/mysql/*"
+    ssh -tq $server "sudo rm -f /var/log/mysql/mysql-slow.log"
     ssh -tq $server "mysql -uisucon -pisucon -e'flush logs;' isucondition"
     # ssh -tq $server "mysqladmin flush-logs"
     scp mysql.cnf $server:/etc/mysql/conf.d/mysql.cnf
