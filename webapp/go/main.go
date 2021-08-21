@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -393,6 +394,12 @@ func setIsuConditionCache(cond *CachedIsuCondition) {
 }
 
 func setIsuConditionsOnCache(conds *[]IsuCondition) {
+	var ClientMutex struct {
+		sync.Mutex
+	}
+
+	ClientMutex.Lock()
+
 	for _, cond := range *conds {
 		newestIsuConditionCache[cond.JIAIsuUUID] = &CachedIsuCondition{
 			JIAIsuUUID: cond.JIAIsuUUID,
@@ -402,6 +409,8 @@ func setIsuConditionsOnCache(conds *[]IsuCondition) {
 			Message:    cond.Message,
 		}
 	}
+
+	ClientMutex.Unlock()
 }
 
 func getIsuConditionCache(key string) *CachedIsuCondition {
