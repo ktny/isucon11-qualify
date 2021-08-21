@@ -1173,17 +1173,19 @@ func getTrend(c echo.Context) error {
 
 	for i, isu := range isuList {
 		if curCharacter != isu.Character {
-			res = append(res,
-				TrendResponse{
-					Character: curCharacter,
-					Info:      characterInfoIsuConditions,
-					Warning:   characterWarningIsuConditions,
-					Critical:  characterCriticalIsuConditions,
-				})
+			if curCharacter != "" {
+				res = append(res,
+					TrendResponse{
+						Character: curCharacter,
+						Info:      characterInfoIsuConditions,
+						Warning:   characterWarningIsuConditions,
+						Critical:  characterCriticalIsuConditions,
+					})
 
-			characterInfoIsuConditions = characterInfoIsuConditions[:0]
-			characterWarningIsuConditions = characterWarningIsuConditions[:0]
-			characterCriticalIsuConditions = characterCriticalIsuConditions[:0]
+				characterInfoIsuConditions = characterInfoIsuConditions[:0]
+				characterWarningIsuConditions = characterWarningIsuConditions[:0]
+				characterCriticalIsuConditions = characterCriticalIsuConditions[:0]
+			}
 
 			curCharacter = isu.Character
 		}
