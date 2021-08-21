@@ -170,8 +170,6 @@ type JIAServiceRequest struct {
 	IsuUUID       string `json:"isu_uuid"`
 }
 
-var jiaServiceURL string
-
 func getEnv(key string, defaultValue string) string {
 	val := os.Getenv(key)
 	if val != "" {
@@ -293,6 +291,18 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	return jiaUserID, 0, nil
 }
 
+func getJIAServiceURL(tx *sqlx.Tx) string {
+	var config Config
+	err := tx.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Print(err)
+		}
+		return defaultJIAServiceURL
+	}
+	return config.URL
+}
+
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
@@ -311,7 +321,16 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	jiaServiceURL = request.JIAServiceURL
+	_, err = db.Exec(
+		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
+		"jia_service_url",
+		request.JIAServiceURL,
+	)
+	if err != nil {
+		c.Logger().Errorf("db error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
@@ -571,7 +590,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	targetURL := jiaServiceURL + "/api/activate"
+	targetURL := getJIAServiceURL(tx) + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
