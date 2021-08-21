@@ -741,6 +741,10 @@ func getIsuIcon(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+    // レスポンスヘッダ
+    response := c.Response()
+    response.Header().Set("Cache-Control", "public max-age=86400")
+
 	return c.Blob(http.StatusOK, "", image)
 }
 
