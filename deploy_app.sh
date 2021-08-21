@@ -11,7 +11,7 @@ godest=/home/isucon/webapp/go/
 # go build -o isucondition
 # cd ../..
 
-for server in isu01; do
+for server in isu01 isu03; do
     # deploy db
     ssh -tq $server "sudo systemctl stop mariadb"
     ssh -tq $server "sudo rm -f /var/log/mysql/mysql-slow.log"
