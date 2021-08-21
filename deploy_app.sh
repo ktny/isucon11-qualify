@@ -27,7 +27,7 @@ for server in isu01; do
     scp webapp/go/main.go $server:$godest
     scp webapp/go/go.mod $server:$godest
     scp webapp/go/go.sum $server:$godest
-    ssh -tq $server "cd webapp/go && go build -o isucondition"
+    ssh -tq $server "cd webapp/go && /home/isucon/local/go/bin/go build -o isucondition"
     ssh -tq $server "sudo systemctl start isucondition.go.service"
     ssh -tq $server "sudo systemctl restart jiaapi-mock.service"
 done
