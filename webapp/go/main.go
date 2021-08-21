@@ -53,6 +53,8 @@ var (
 	postIsuConditionTargetBaseURL string // JIAへのactivate時に登録する，ISUがconditionを送る先のURL
 )
 
+var lock = sync.Mutex{}
+
 type Config struct {
 	Name string `db:"name"`
 	URL  string `db:"url"`
@@ -394,11 +396,8 @@ func setIsuConditionCache(cond *CachedIsuCondition) {
 }
 
 func setIsuConditionsOnCache(conds *[]IsuCondition) {
-	var ClientMutex struct {
-		sync.Mutex
-	}
-
-	ClientMutex.Lock()
+	lock.Lock()
+	defer lock.Unlock()
 
 	for _, cond := range *conds {
 		newestIsuConditionCache[cond.JIAIsuUUID] = &CachedIsuCondition{
@@ -409,11 +408,12 @@ func setIsuConditionsOnCache(conds *[]IsuCondition) {
 			Message:    cond.Message,
 		}
 	}
-
-	ClientMutex.Unlock()
 }
 
 func getIsuConditionCache(key string) *CachedIsuCondition {
+	lock.Lock()
+	defer lock.Unlock()
+
 	return newestIsuConditionCache[key]
 }
 
